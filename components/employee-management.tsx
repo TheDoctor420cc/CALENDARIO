@@ -12,6 +12,7 @@ interface Employee {
   id: string
   name: string
   rank: string
+  department?: string
   vacationDays: Record<string, number[]>
   preferences: Record<string, string[]>
 }
@@ -21,9 +22,9 @@ interface EmployeeManagementProps {
   monthKey: string
   currentDate: Date // Changed from Date | null to Date
   onUpdateVacation: (employeeId: string, day: number, isVacation: boolean) => void
-  onAddEmployee: (name: string, rank: string) => void
+  onAddEmployee: (name: string, rank: string, department: string) => void
   onRemoveEmployee: (employeeId: string) => void
-  onEditEmployee: (employeeId: string, name: string, rank: string) => void
+  onEditEmployee: (employeeId: string, name: string, rank: string, department: string) => void
 }
 
 export default function EmployeeManagement({
@@ -41,14 +42,18 @@ export default function EmployeeManagement({
   const [showEditForm, setShowEditForm] = useState(false)
   const [newName, setNewName] = useState("")
   const [newRank, setNewRank] = useState("R3")
+  const [newDepartment, setNewDepartment] = useState("COLOPROCTO")
   const [editName, setEditName] = useState("")
   const [editRank, setEditRank] = useState("R3")
+  const [editDepartment, setEditDepartment] = useState("COLOPROCTO")
 
   const [year, month] = monthKey.split("-").map(Number)
   const daysInMonth = new Date(year, month + 1, 0).getDate()
 
   const selectedEmp = employees.find((emp) => emp.id === selectedEmployee)
   const vacationDays = selectedEmp?.vacationDays[monthKey] || []
+
+  const departments = ["COLOPROCTO", "HEPÁTICA", "CMA", "MAMA"]
 
   const getRankColor = (rank: string) => {
     switch (rank) {
@@ -67,9 +72,10 @@ export default function EmployeeManagement({
 
   const handleAddEmployee = () => {
     if (newName.trim()) {
-      onAddEmployee(newName, newRank)
+      onAddEmployee(newName, newRank, newDepartment)
       setNewName("")
       setNewRank("R3")
+      setNewDepartment("COLOPROCTO")
       setShowAddForm(false)
     }
   }
@@ -77,12 +83,13 @@ export default function EmployeeManagement({
   const handleStartEdit = (emp: Employee) => {
     setEditName(emp.name)
     setEditRank(emp.rank)
+    setEditDepartment(emp.department || "COLOPROCTO")
     setShowEditForm(true)
   }
 
   const handleSaveEdit = () => {
     if (selectedEmployee && editName.trim()) {
-      onEditEmployee(selectedEmployee, editName, editRank)
+      onEditEmployee(selectedEmployee, editName, editRank, editDepartment)
       setShowEditForm(false)
     }
   }
@@ -120,6 +127,18 @@ export default function EmployeeManagement({
                   <SelectItem value="R2">R2</SelectItem>
                 </SelectContent>
               </Select>
+              <Select value={newDepartment} onValueChange={setNewDepartment}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Departamento" />
+                </SelectTrigger>
+                <SelectContent>
+                  {departments.map((dept) => (
+                    <SelectItem key={dept} value={dept}>
+                      {dept}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <div className="flex gap-2">
                 <Button onClick={handleAddEmployee} className="flex-1">
                   Guardar
@@ -145,6 +164,11 @@ export default function EmployeeManagement({
                   <div onClick={() => setSelectedEmployee(emp.id)} className="flex-1 flex items-center gap-2">
                     <span className="font-medium text-slate-900 dark:text-white">{emp.name}</span>
                     <Badge className={getRankColor(emp.rank)}>{emp.rank}</Badge>
+                    {emp.department && (
+                      <Badge variant="outline" className="border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200">
+                        {emp.department}
+                      </Badge>
+                    )}
                   </div>
                   <div className="flex gap-1">
                     <Button size="sm" variant="ghost" onClick={() => handleStartEdit(emp)} className="h-8 w-8 p-0">
@@ -189,6 +213,18 @@ export default function EmployeeManagement({
                   <SelectItem value="R4">R4</SelectItem>
                   <SelectItem value="R3">R3</SelectItem>
                   <SelectItem value="R2">R2</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={editDepartment} onValueChange={setEditDepartment}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Departamento" />
+                </SelectTrigger>
+                <SelectContent>
+                  {departments.map((dept) => (
+                    <SelectItem key={dept} value={dept}>
+                      {dept}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <div className="flex gap-2">
