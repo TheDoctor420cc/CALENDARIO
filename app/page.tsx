@@ -484,30 +484,75 @@ export default function SchedulePage() {
 
   const handleAddEmployee = async (name: string, rank: string, department: string) => {
     try {
-      console.log(`[v0] Adding employee: ${name} (${rank})`)
+      console.log(`[v0] Adding employee: ${name} (${rank}) [${department}]`)
 
       const newEmployeeId = `${name.toLowerCase().replace(/\s+/g, "")}${rank.toLowerCase()}`
+      const payload: Record<string, any> = {
+        id: newEmployeeId,
+        name,
+        rank,
+        department,
+      }
 
-      const { error } = await supabase.from("employees").insert({ id: newEmployeeId, name, rank, department })
+      let insertError
+      let insertedEmployee
+
+      const { data, error } = await supabase
+        .from("employees")
+        .insert(payload)
+        .select("*")
+        .single()
 
       if (error) {
-        console.error("[v0] Error adding employee:", error)
+        const errorMessage = error.message || JSON.stringify(error)
+        console.error("[v0] Error adding employee (with department):", errorMessage)
+
+        // Fallback for environments where the "department" column is not yet available
+        if (errorMessage.toLowerCase().includes("department")) {
+          const fallbackPayload = { id: newEmployeeId, name, rank }
+          const { data: fallbackData, error: fallbackError } = await supabase
+            .from("employees")
+            .insert(fallbackPayload)
+            .select("*")
+            .single()
+
+          if (fallbackError) {
+            insertError = fallbackError
+          } else {
+            insertedEmployee = fallbackData
+            toast({
+              title: "Empleado agregado sin departamento",
+              description:
+                "El empleado se guardó, pero el campo de departamento no está disponible en la base de datos. Actualiza el esquema para habilitarlo.",
+              variant: "destructive",
+            })
+          }
+        } else {
+          insertError = error
+        }
+      } else {
+        insertedEmployee = data
+      }
+
+      if (insertError) {
+        console.error("[v0] Error adding employee:", insertError)
         toast({
           variant: "destructive",
           title: "Error al agregar empleado",
-          description: error.message || `No se pudo agregar a ${name}`,
+          description: insertError.message || `No se pudo agregar a ${name}`,
         })
-        throw error
+        throw insertError
       }
 
       const newEmployee = {
-        id: newEmployeeId,
+        id: insertedEmployee?.id || newEmployeeId,
         name,
         rank,
         department,
         vacationDays: {},
         preferences: {},
       }
+
       setEmployees([...employees, newEmployee])
 
       toast({
@@ -551,16 +596,44 @@ export default function SchedulePage() {
     try {
       console.log(`[v0] Editing employee: ${employeeId} to ${name} (${rank}) [${department}]`)
 
-      const { error } = await supabase.from("employees").update({ name, rank, department }).eq("id", employeeId)
+      const payload: Record<string, any> = { name, rank, department }
+      let updateError
+
+      const { error } = await supabase.from("employees").update(payload).eq("id", employeeId)
 
       if (error) {
-        console.error("[v0] Error editing employee:", error)
+        const errorMessage = error.message || JSON.stringify(error)
+        console.error("[v0] Error editing employee (with department):", errorMessage)
+
+        if (errorMessage.toLowerCase().includes("department")) {
+          const { error: fallbackError } = await supabase
+            .from("employees")
+            .update({ name, rank })
+            .eq("id", employeeId)
+
+          if (fallbackError) {
+            updateError = fallbackError
+          } else {
+            toast({
+              title: "Departamento no actualizado",
+              description:
+                "El empleado se actualizó, pero el campo de departamento no está disponible en la base de datos. Actualiza el esquema para habilitarlo.",
+              variant: "destructive",
+            })
+          }
+        } else {
+          updateError = error
+        }
+      }
+
+      if (updateError) {
+        console.error("[v0] Error editing employee:", updateError)
         toast({
           variant: "destructive",
           title: "Error al editar empleado",
-          description: error.message || `No se pudo editar al empleado`,
+          description: updateError.message || `No se pudo editar al empleado`,
         })
-        throw error
+        throw updateError
       }
 
       const updatedEmployees = employees.map((emp) =>
