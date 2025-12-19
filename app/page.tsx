@@ -149,6 +149,7 @@ export default function SchedulePage() {
             id: emp.id,
             name: emp.name,
             rank: emp.rank,
+            department: emp.department || "",
             vacationDays,
             preferences: {},
           }
@@ -481,13 +482,13 @@ export default function SchedulePage() {
     }
   }
 
-  const handleAddEmployee = async (name: string, rank: string) => {
+  const handleAddEmployee = async (name: string, rank: string, department: string) => {
     try {
       console.log(`[v0] Adding employee: ${name} (${rank})`)
 
       const newEmployeeId = `${name.toLowerCase().replace(/\s+/g, "")}${rank.toLowerCase()}`
 
-      const { error } = await supabase.from("employees").insert({ id: newEmployeeId, name, rank })
+      const { error } = await supabase.from("employees").insert({ id: newEmployeeId, name, rank, department })
 
       if (error) {
         console.error("[v0] Error adding employee:", error)
@@ -503,6 +504,7 @@ export default function SchedulePage() {
         id: newEmployeeId,
         name,
         rank,
+        department,
         vacationDays: {},
         preferences: {},
       }
@@ -545,11 +547,11 @@ export default function SchedulePage() {
     }
   }
 
-  const handleEditEmployee = async (employeeId: string, name: string, rank: string) => {
+  const handleEditEmployee = async (employeeId: string, name: string, rank: string, department: string) => {
     try {
-      console.log(`[v0] Editing employee: ${employeeId} to ${name} (${rank})`)
+      console.log(`[v0] Editing employee: ${employeeId} to ${name} (${rank}) [${department}]`)
 
-      const { error } = await supabase.from("employees").update({ name, rank }).eq("id", employeeId)
+      const { error } = await supabase.from("employees").update({ name, rank, department }).eq("id", employeeId)
 
       if (error) {
         console.error("[v0] Error editing employee:", error)
@@ -561,7 +563,9 @@ export default function SchedulePage() {
         throw error
       }
 
-      const updatedEmployees = employees.map((emp) => (emp.id === employeeId ? { ...emp, name, rank } : emp))
+      const updatedEmployees = employees.map((emp) =>
+        emp.id === employeeId ? { ...emp, name, rank, department } : emp,
+      )
       setEmployees(updatedEmployees)
 
       toast({
